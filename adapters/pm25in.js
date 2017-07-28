@@ -97,7 +97,7 @@ var formatData = function (data, source) {
     const parameters = ['so2', 'no2', 'pm10', 'co', 'o3', 'pm2_5'];
     for (var n = 0; n < parameters.length; n++) {
       var param = parameters[n]
-      if (data[i][param]) {
+      if (data[i][param] !== undefined) {
         var obj = _.cloneDeep(baseObj);
         obj.parameter = param;
         if (param == 'co') {
