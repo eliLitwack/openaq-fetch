@@ -308,5 +308,20 @@
             "info@openaq.org"
         ],
         "active": true
+    },
+    {
+        "url": "http://222.177.117.35:8021/HistoryDay/HistoryDayMain.aspx",
+        "adapter": "chongqing",
+        "name": "Chongqing",
+        "city": "Chongqing",
+        "country": "CN",
+        "description": "Data from the Chongqing Envoirnmental Protection Board",
+        "resolution": "1 hr",
+        "sourceURL": "http://222.177.117.35:8021/HistoryDay/SitesDataStationMap.aspx",
+        "contacts": [
+            "elilitwack+openaq@gmail.com",
+            "info@openaq.org"
+        ],
+        "active": true
     }
 ]
