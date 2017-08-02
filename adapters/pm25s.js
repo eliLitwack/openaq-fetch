@@ -11,7 +11,7 @@ import { default as moment } from 'moment-timezone';
 import {transliterate as tr} from 'transliteration';
 const request = baseRequest.defaults({timeout: REQUEST_TIMEOUT});
 
-export const name = 'anhui';
+export const name = 'pm25s';
 /**
  * Fetches the data for a given source and returns an appropriate object
  * @param {object} source A valid source object
@@ -40,64 +40,12 @@ export const fetchData = function (source, cb) {
 };
 
 /**
- * A city name in pinyin romanization or Chinese characters and a station name in chinese characters, get the coordinates of the station
- * To deal with a homonym, Taizhoushi resolves to 泰州 while Taizhou resolves to 台州, 
- * even though 台州 and 泰州 have the same pinyin romanization
- * @param {object} city A city name in pinyin romanization or Chinese characters
+ * From a city name in Chinese characters and a station name in chinese characters, get the coordinates of the station
+ * @param {object} city A city name in Chinese characters
  * @param {object} station A station name in Chinese characters
  * @return {object} if the location is known, an object with 'latitude' and 'longitude' properties, otherwise undefined
  */
 var getCoordinates = function (city, station) {
-  switch (city) {
-    case 'Hefei':
-      city = '合肥';
-      break;
-    case 'Huaibei':
-      city = '淮北';
-      break;
-    case 'Bozhou':
-      city = '亳州';
-      break;
-    case 'Suzhou':
-      city = '宿州';
-      break;
-    case 'Bengbu':
-      city = '蚌埠';
-      break;
-    case 'Fuyang':
-      city = '阜阳';
-      break;
-    case 'Huainan':
-      city = '淮南';
-      break;
-    case 'Chuzhou':
-      city = '滁州';
-      break;
-    case "Liu'an":
-      city = '六安';
-      break;
-    case "Ma'anshan":
-      city = '马鞍山';
-      break;
-    case 'Wuhu':
-      city = '芜湖';
-      break;
-    case 'Xuancheng':
-      city = '宣城';
-      break;
-    case 'Tongling':
-      city = '铜陵';
-      break;
-    case 'Chizhou':
-      city = '池州';
-      break;
-    case 'Anqing':
-      city = '安庆';
-      break;
-    case 'Huangshan':
-      city = '黄山';
-      break;
-  }
   let cords = require('../data_scripts/china-locations.json')[city + station];
   if (cords) {
     var lon = cords[0];
@@ -121,7 +69,7 @@ var formatData = function (data, source) {
    * @return {object} An object containing both UTC and local times
    */
   var getDate = function (dateString) {
-    var date = moment.tz(dateString, 'MM/DD/YYYY HH:mm:ss', 'Asia/Shanghai');
+    var date = moment.tz(dateString, 'YYYY-MM-DD HH:mm:ss', 'Asia/Shanghai');
     return {utc: date.toDate(), local: date.format()};
   };
 
@@ -133,44 +81,48 @@ var formatData = function (data, source) {
 
   // parse date-time
   // get the title of first table (which is the table of government/research sources - the second table is private sources)
-  // which contains the date-time of the measurement in chinese date time format (year年month月day号 hour时)
+  // which contains the date-time of the measurement in chinese date time format (year年month月day号hour时)
   // the regex matches the chinese date time
-  let time = $('.hj_inside').find('.data_wrap').first().find('.data_title').text().match(/\d+/g);
+  let time = $('.date').text().match(/\d+/g);
   // reassemble into western date time
   time = time[1] + '/' + time[2] + '/' + time[0] + ' ' + time[3] + ':00:00';
   time = getDate(time);
 
-  // get each row in the first table (which is the table of government/research sources - the second table is private sources)
-  $('.hj_inside').find('.data_wrap').first().find('.data_mod').find('.data_table').children().each(function (i, elem) {
+  //find the city name
+  let thisCity = $('#title').last().text().replace(/[PM2.5]/g, '');
+
+  $('.pm25').first().find('div').each(function (i, elem) {
     let entries = $(elem).children();
-    // this regex removes whitespace and endline/return chars
-    let stationName = entries[0].children[0].data.replace(/\s+\s|\\r|\\n/g, '');
+    let stationName = $(entries[0]).text().replace(/\s+\s|\\r|\\n/g, ''); //regex removes whitespace and endline chars
     let values = {};
-    values.no2 = entries[1];
-    values.so2 = entries[2];
-    values.co = entries[3];
-    values.o3 = entries[4];
-    values.pm10 = entries[5];
-    values.pm25 = entries[6];
+    values.pm25 = entries[2]
+    values.pm10 = entries[3]
+    values.co = entries[4]
+    values.no2 = entries[5]
+    values.so2 = entries[6]
+    values.o3 = entries[7]
     for (var key in values) {
       values[key] = values[key].children[0].data.replace(/\s+\s|\\r|\\n/g, '');
-      if (key === 'co') {
-        values[key] = values[key] * 1000;
-      }
       if (!isNaN(values[key])) {
+        values[key] = parseFloat(values[key])
+
+        if (key === 'co') {
+          values[key] = values[key] * 1000; //because Chinese sources report CO in mg/m³, not µg/m³
+        }
+
         let obj = {
-          location: source.name + ' ' + tr(stationName),
+          location: tr(thisCity + stationName),
           parameter: key,
           unit: 'µg/m³',
           averagingPeriod: {'value': 1, 'unit': 'hours'},
           date: time,
           value: parseFloat(values[key]),
           attribution: [{
-            name: 'Envoirnmental Protection Department of Anhui Province',
-            url: source.sourceURL
+            name: 'PM25s.com',
+            url: "http://pm25s.com"
           }]
         };
-        let cords = getCoordinates(source.city, stationName);
+        let cords = getCoordinates(thisCity, stationName);
         if (cords) {
           obj.coordinates = cords;
         }
